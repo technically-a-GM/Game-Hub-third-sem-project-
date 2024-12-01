@@ -319,7 +319,7 @@ vector<pair<int, int>> moveHistory; // Stores the history of moves (x, y)
 void init();
 int countSurroundingMines(int x, int y);
 void reveal(int x, int y);
-void player();
+void player(bool & playing);
 void setFlag();
 void uncover();
 void print();
@@ -330,13 +330,17 @@ bool playNewGame();
 
 int minesweeperGame() {
     cout << "Welcome to MineSweeper!" << endl;
-
+      bool play = true;
     init();
     bool playing = true;
     while (playing) {
         print();
         cout << "Current Score: " << score << endl;
-        player();
+        player(play);
+        if(!play){
+            play = true;
+            break;
+        }
 
         if (isWin()) {
             cout << "You Win!" << endl;
@@ -473,8 +477,8 @@ bool isLose() {
     return false;
 }
 
-void player() {
-    cout << "Commands: R => Show, F => Flag, C => Cheat, N => NewGame" << endl;
+void player(bool & playing) {
+    cout << "Commands: R => Show, F => Flag, C => Cheat, N => NewGame, E => Exit" << endl;
     bool selected = false;
     while (!selected) {
         char choice;
@@ -490,7 +494,12 @@ void player() {
         } else if (choice == 'N' || choice == 'n') {
             init();
             selected = true;
-        } else {
+        } 
+        else if (choice == 'E' || choice == 'e') {
+            playing = false;
+            return;
+        }
+        else {
             cout << "Invalid Choice!" << endl;
         }
     }
@@ -619,11 +628,14 @@ bool playNewGame() {
 
 //Maze Runner
 
+
+
+
 const int ROWS = 10;
 const int COLS = 20;
 
 // Symbols for the maze
-const char WALL = '#';
+const char WALL = '*';
 const char PATH = ' ';
 const char PLAYER = 'P';
 const char GOAL = 'G';
@@ -633,6 +645,35 @@ char maze[ROWS][COLS];
 
 // Player's position
 int playerX, playerY;
+
+// points linked list
+struct Node {
+    int points;
+    Node* next;
+};
+Node* head = nullptr;
+
+// Player stats
+int wallCollisions = 0;
+int points = 100;
+
+void addpoints(int value) {
+    points += value;
+
+    // Add points to the linked list
+    Node* newNode = new Node{points, head};
+    head = newNode;
+}
+
+void displaypointss() {
+    cout << "points History: ";
+    Node* current = head;
+    while (current) {
+        cout << current->points << " ";
+        current = current->next;
+    }
+    cout << endl;
+}
 
 void generateMaze() {
     srand(time(0));
@@ -683,6 +724,8 @@ void displayMaze() {
         }
         cout << endl;
     }
+    cout << "Current points: " << points << endl;
+    cout << "Wall Collisions: " << wallCollisions << endl;
 }
 
 bool movePlayer(int dx, int dy) {
@@ -691,6 +734,13 @@ bool movePlayer(int dx, int dy) {
 
     // Check if the move is valid
     if (maze[newX][newY] == WALL) {
+        wallCollisions++;
+        addpoints(-5); // Decrease points
+        if (wallCollisions > 10) {
+            displayMaze();
+            cout << "Game Over! You collided with the wall too many times!" << endl;
+            return true;
+        }
         return false;
     }
 
@@ -711,6 +761,7 @@ bool movePlayer(int dx, int dy) {
     playerY = newY;
     maze[playerX][playerY] = PLAYER;
 
+    addpoints(10); // Increase points for a successful move
     return false;
 }
 
@@ -738,11 +789,18 @@ void playGame() {
 
 int mazeRunnerGame() {
     generateMaze();
+    addpoints(0); // Initialize points tracking
     playGame();
+
+    // Cleanup linked list
+    while (head) {
+        Node* temp = head;
+        head = head->next;
+        delete temp;
+    }
 
     return 0;
 }
-
 
 void mainMenu() {
     while (true) {
